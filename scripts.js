@@ -1,308 +1,286 @@
-/**
- * Sinodol Website - JavaScript
- * Handles: Navigation, Scroll Animations, FAQ Accordion, Form Validation
- */
+/* ================================================================
+   SINODOL — scripts.js
+   Animaciones, interacciones y comportamiento UI
+================================================================ */
 
-// TRACKING: This file contains comments for analytics integration points
+(function () {
+  'use strict';
 
-document.addEventListener('DOMContentLoaded', function () {
-    // Initialize all modules
-    initNavigation();
-    initScrollAnimations();
-    initFAQ();
-    initSmoothScroll();
-    initUrgencyCountdown();
-});
+  /* ──────────────────────────────────────────────
+     1. CUSTOM CURSOR
+  ────────────────────────────────────────────── */
+  const cursor     = document.getElementById('cursor');
+  const cursorRing = document.getElementById('cursorRing');
 
-/**
- * Navigation - Sticky with scroll effect
- */
-function initNavigation() {
-    const nav = document.getElementById('navbar');
-    let lastScroll = 0;
+  if (cursor && cursorRing) {
+    let mouseX = 0, mouseY = 0;
+    let ringX  = 0, ringY  = 0;
+    let raf;
 
-    window.addEventListener('scroll', function () {
-        const currentScroll = window.pageYOffset;
-
-        // Add scrolled class for shadow effect
-        if (currentScroll > 50) {
-            nav.classList.add('scrolled');
-        } else {
-            nav.classList.remove('scrolled');
-        }
-
-        lastScroll = currentScroll;
+    document.addEventListener('mousemove', (e) => {
+      mouseX = e.clientX;
+      mouseY = e.clientY;
+      cursor.style.transform = `translate(${mouseX}px, ${mouseY}px) translate(-50%, -50%)`;
     });
 
-    // TRACKING: nav_cta_click
-    const navCTA = document.querySelector('.nav-cta');
-    if (navCTA) {
-        navCTA.addEventListener('click', function () {
-            // TRACKING: navigation_cta_click
-            console.log('TRACKING: nav_cta_click');
-        });
+    // Smooth trailing ring
+    function animateCursorRing() {
+      ringX += (mouseX - ringX) * 0.14;
+      ringY += (mouseY - ringY) * 0.14;
+      cursorRing.style.transform = `translate(${ringX}px, ${ringY}px) translate(-50%, -50%)`;
+      raf = requestAnimationFrame(animateCursorRing);
     }
-}
+    animateCursorRing();
 
-/**
- * Scroll Animations - Fade in elements on scroll
- */
-function initScrollAnimations() {
-    const fadeElements = document.querySelectorAll('.fade-in');
-
-    const observerOptions = {
-        root: null,
-        rootMargin: '0px',
-        threshold: 0.1
-    };
-
-    const observer = new IntersectionObserver(function (entries, observer) {
-        entries.forEach(function (entry) {
-            if (entry.isIntersecting) {
-                entry.target.classList.add('visible');
-                // Optional: Stop observing after animation
-                // observer.unobserve(entry.target);
-            }
-        });
-    }, observerOptions);
-
-    fadeElements.forEach(function (element) {
-        observer.observe(element);
+    // Hover state on interactive elements
+    const hoverTargets = document.querySelectorAll(
+      'a, button, .faq-question, .stat-card, .pricing-card, .dual-card, .testimonial-card, .benefit-card'
+    );
+    hoverTargets.forEach((el) => {
+      el.addEventListener('mouseenter', () => {
+        cursor.classList.add('hover');
+        cursorRing.classList.add('hover');
+      });
+      el.addEventListener('mouseleave', () => {
+        cursor.classList.remove('hover');
+        cursorRing.classList.remove('hover');
+      });
     });
-}
 
-/**
- * FAQ Accordion
- */
-function initFAQ() {
-    const faqItems = document.querySelectorAll('.faq-item');
-
-    faqItems.forEach(function (item) {
-        const question = item.querySelector('.faq-question');
-
-        question.addEventListener('click', function () {
-            const isActive = item.classList.contains('active');
-
-            // Close all other items
-            faqItems.forEach(function (otherItem) {
-                otherItem.classList.remove('active');
-                otherItem.querySelector('.faq-question').setAttribute('aria-expanded', 'false');
-            });
-
-            // Toggle current item
-            if (!isActive) {
-                item.classList.add('active');
-                question.setAttribute('aria-expanded', 'true');
-                // TRACKING: faq_item_open
-                console.log('TRACKING: faq_open - ' + question.textContent.trim().substring(0, 30));
-            }
-        });
+    // Hide cursor when leaving window
+    document.addEventListener('mouseleave', () => {
+      cursor.style.opacity = '0';
+      cursorRing.style.opacity = '0';
     });
-}
-
-/**
- * Smooth Scroll for anchor links
- */
-function initSmoothScroll() {
-    const anchorLinks = document.querySelectorAll('a[href^="#"]');
-
-    anchorLinks.forEach(function (link) {
-        link.addEventListener('click', function (e) {
-            const href = this.getAttribute('href');
-
-            if (href === '#') return;
-
-            const target = document.querySelector(href);
-
-            if (target) {
-                e.preventDefault();
-                const navHeight = document.getElementById('navbar').offsetHeight;
-                const targetPosition = target.getBoundingClientRect().top + window.pageYOffset - navHeight - 20;
-
-                window.scrollTo({
-                    top: targetPosition,
-                    behavior: 'smooth'
-                });
-
-                // TRACKING: internal_link_click
-                console.log('TRACKING: scroll_to_section - ' + href);
-            }
-        });
+    document.addEventListener('mouseenter', () => {
+      cursor.style.opacity = '1';
+      cursorRing.style.opacity = '0.55';
     });
-}
+  }
 
-/**
- * Urgency Countdown (for ethical scarcity)
- * Updates the stock counter periodically
- */
-function initUrgencyCountdown() {
-    const stockElement = document.querySelector('.final-cta-stock span:last-child');
+  /* ──────────────────────────────────────────────
+     2. SCROLL PROGRESS BAR
+  ────────────────────────────────────────────── */
+  const progressBar = document.getElementById('scrollProgress');
 
-    if (!stockElement) return;
+  function updateScrollProgress() {
+    if (!progressBar) return;
+    const scrollTop  = window.scrollY;
+    const docHeight  = document.documentElement.scrollHeight - window.innerHeight;
+    const pct        = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
+    progressBar.style.width = pct + '%';
+  }
 
-    // Simulate real-time stock (ethical - based on documented urgency)
-    let currentStock = 14;
+  /* ──────────────────────────────────────────────
+     3. NAVBAR — scroll class
+  ────────────────────────────────────────────── */
+  const navbar = document.getElementById('navbar');
 
-    // Update stock every 2-5 minutes randomly (simulated)
-    function updateStock() {
-        // Only decrease occasionally for realism
-        if (Math.random() > 0.7 && currentStock > 5) {
-            currentStock--;
-            stockElement.textContent = 'Quedan ' + currentStock + ' kits disponibles para despacho hoy mismo';
+  function updateNavbar() {
+    if (!navbar) return;
+    if (window.scrollY > 60) {
+      navbar.classList.add('scrolled');
+    } else {
+      navbar.classList.remove('scrolled');
+    }
+  }
+
+  /* ──────────────────────────────────────────────
+     4. SCROLL REVEAL — IntersectionObserver
+  ────────────────────────────────────────────── */
+  const revealObserver = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          const el    = entry.target;
+          const delay = el.dataset.delay ? parseInt(el.dataset.delay, 10) : 0;
+          setTimeout(() => {
+            el.classList.add('visible');
+          }, delay);
+          revealObserver.unobserve(el);
         }
+      });
+    },
+    { threshold: 0.12, rootMargin: '0px 0px -60px 0px' }
+  );
 
-        // Schedule next update
-        const nextUpdate = Math.floor(Math.random() * (300000 - 120000) + 120000); // 2-5 min
-        setTimeout(updateStock, nextUpdate);
+  document.querySelectorAll('.scroll-reveal').forEach((el) => {
+    revealObserver.observe(el);
+  });
+
+  /* ──────────────────────────────────────────────
+     5. FAQ ACCORDION
+  ────────────────────────────────────────────── */
+  const faqItems = document.querySelectorAll('.faq-item');
+
+  faqItems.forEach((item) => {
+    const btn    = item.querySelector('.faq-question');
+    const answer = item.querySelector('.faq-answer');
+
+    if (!btn || !answer) return;
+
+    btn.addEventListener('click', () => {
+      const isOpen = item.classList.contains('open');
+
+      // Close all
+      faqItems.forEach((other) => {
+        other.classList.remove('open');
+        const otherBtn = other.querySelector('.faq-question');
+        if (otherBtn) otherBtn.setAttribute('aria-expanded', 'false');
+      });
+
+      // Toggle clicked
+      if (!isOpen) {
+        item.classList.add('open');
+        btn.setAttribute('aria-expanded', 'true');
+      }
+    });
+  });
+
+  /* ──────────────────────────────────────────────
+     6. STAT CARD NUMBER COUNTER ANIMATION
+  ────────────────────────────────────────────── */
+  function animateCounter(el, target, suffix, duration) {
+    const start     = 0;
+    const startTime = performance.now();
+
+    function update(currentTime) {
+      const elapsed  = currentTime - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      // Ease out cubic
+      const eased    = 1 - Math.pow(1 - progress, 3);
+      const value    = Math.floor(eased * target);
+      el.textContent = value + suffix;
+      if (progress < 1) requestAnimationFrame(update);
+    }
+    requestAnimationFrame(update);
+  }
+
+  // Trigger counter on stat cards that have numeric content
+  const statNums = document.querySelectorAll('.stat-num');
+  const counterObserver = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          const el   = entry.target;
+          const text = el.textContent.trim();
+          if (text === '100%') {
+            animateCounter(el, 100, '%', 1400);
+          }
+          counterObserver.unobserve(el);
+        }
+      });
+    },
+    { threshold: 0.5 }
+  );
+
+  statNums.forEach((el) => counterObserver.observe(el));
+
+  /* ──────────────────────────────────────────────
+     7. SMOOTH SCROLL for anchor links
+  ────────────────────────────────────────────── */
+  document.querySelectorAll('a[href^="#"]').forEach((link) => {
+    link.addEventListener('click', (e) => {
+      const href = link.getAttribute('href');
+      if (href === '#') return;
+      const target = document.querySelector(href);
+      if (!target) return;
+      e.preventDefault();
+      const navH   = navbar ? navbar.offsetHeight : 0;
+      const top    = target.getBoundingClientRect().top + window.scrollY - navH - 20;
+      window.scrollTo({ top, behavior: 'smooth' });
+    });
+  });
+
+  /* ──────────────────────────────────────────────
+     8. MARQUEE — trust bar (seamless)
+  ────────────────────────────────────────────── */
+  (function () {
+    const track = document.querySelector('.trust-track');
+    const group = document.querySelector('.trust-group');
+    if (!track || !group) return;
+
+    let x = 0;
+    const speed = 0.6;
+
+    function tick() {
+      x -= speed;
+      if (Math.abs(x) >= group.offsetWidth) x = 0;
+      track.style.transform = `translateX(${x}px)`;
+      requestAnimationFrame(tick);
     }
 
-    // Start after 1 minute
-    setTimeout(updateStock, 60000);
-}
+    requestAnimationFrame(tick);
+  })();
 
-/**
- * Form Validation (for future form implementation)
- */
-function validateForm(form) {
-    const requiredFields = form.querySelectorAll('[required]');
-    let isValid = true;
+  /* ──────────────────────────────────────────────
+     9. UNIFIED SCROLL HANDLER
+  ────────────────────────────────────────────── */
+  let ticking = false;
 
-    requiredFields.forEach(function (field) {
-        if (!field.value.trim()) {
-            isValid = false;
-            field.classList.add('error');
-        } else {
-            field.classList.remove('error');
-        }
+  function onScroll() {
+    if (!ticking) {
+      requestAnimationFrame(() => {
+        updateScrollProgress();
+        updateNavbar();
+        ticking = false;
+      });
+      ticking = true;
+    }
+  }
 
-        // Email validation
-        if (field.type === 'email' && field.value) {
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            if (!emailRegex.test(field.value)) {
-                isValid = false;
-                field.classList.add('error');
-            }
-        }
+  window.addEventListener('scroll', onScroll, { passive: true });
 
-        // Phone validation (Colombia)
-        if (field.type === 'tel' && field.value) {
-            const phoneRegex = /^(\+57)?[0-9]{10}$/;
-            if (!phoneRegex.test(field.value.replace(/\s/g, ''))) {
-                isValid = false;
-                field.classList.add('error');
-            }
-        }
+  // Initial calls
+  updateScrollProgress();
+  updateNavbar();
+
+  /* ──────────────────────────────────────────────
+     10. PRICING CARD micro-animation on hover (tilt)
+  ────────────────────────────────────────────── */
+  const tiltCards = document.querySelectorAll('.pricing-card:not(.featured), .testimonial-card, .stat-card');
+
+  tiltCards.forEach((card) => {
+    card.addEventListener('mousemove', (e) => {
+      const rect   = card.getBoundingClientRect();
+      const cx     = rect.left + rect.width  / 2;
+      const cy     = rect.top  + rect.height / 2;
+      const dx     = (e.clientX - cx) / (rect.width  / 2);
+      const dy     = (e.clientY - cy) / (rect.height / 2);
+      const rotX   = -dy * 4;
+      const rotY   =  dx * 4;
+      card.style.transform = `perspective(800px) rotateX(${rotX}deg) rotateY(${rotY}deg) translateY(-5px)`;
     });
 
-    return isValid;
-}
-
-/**
- * WhatsApp Message Builder
- * Creates pre-filled WhatsApp messages based on selected plan
- */
-function buildWhatsAppMessage(plan, price) {
-    const baseUrl = 'https://wa.me/573001234567';
-    const message = encodeURIComponent(
-        'Hola! Quiero ordenar el ' + plan + ' de Sinodol por ' + price + '. ¿Está disponible?'
-    );
-    return baseUrl + '?text=' + message;
-}
-
-/**
- * Pricing Card CTA Handlers
- */
-document.querySelectorAll('.pricing-card .btn').forEach(function (btn) {
-    btn.addEventListener('click', function (e) {
-        const card = this.closest('.pricing-card');
-        const planName = card.querySelector('.pricing-name').textContent;
-        const planPrice = card.querySelector('.pricing-amount').textContent;
-
-        // TRACKING: pricing_plan_selected
-        console.log('TRACKING: pricing_selected - ' + planName);
-
-        // Update WhatsApp link dynamically
-        const whatsappUrl = buildWhatsAppMessage(planName, '$' + planPrice);
-
-        // If it's the main CTA, redirect to WhatsApp
-        if (this.classList.contains('btn-primary')) {
-            e.preventDefault();
-            window.open(whatsappUrl, '_blank');
-        }
+    card.addEventListener('mouseleave', () => {
+      card.style.transform = '';
+      card.style.transition = 'transform 0.6s cubic-bezier(0.19,1,0.22,1)';
     });
-});
 
-/**
- * Hero CTA Tracking
- */
-const heroCTA = document.querySelector('.hero .btn-primary');
-if (heroCTA) {
-    heroCTA.addEventListener('click', function () {
-        // TRACKING: hero_cta_click
-        console.log('TRACKING: hero_cta_click');
+    card.addEventListener('mouseenter', () => {
+      card.style.transition = 'transform 0.1s ease, box-shadow 0.4s ease, border-color 0.4s ease';
     });
-}
+  });
 
-/**
- * Final CTA Tracking
- */
-const finalCTA = document.querySelector('.final-cta .btn-primary');
-if (finalCTA) {
-    finalCTA.addEventListener('click', function () {
-        // TRACKING: final_cta_click
-        console.log('TRACKING: final_cta_click');
-    });
-}
+  /* ──────────────────────────────────────────────
+     11. WHATSAPP BUTTON — entrance animation delay
+  ────────────────────────────────────────────── */
+  const waFloat = document.querySelector('.whatsapp-float');
+  if (waFloat) {
+    waFloat.style.opacity   = '0';
+    waFloat.style.transform = 'scale(0.5)';
+    setTimeout(() => {
+      waFloat.style.transition = 'opacity 0.6s ease, transform 0.6s cubic-bezier(0.34,1.56,0.64,1)';
+      waFloat.style.opacity    = '1';
+      waFloat.style.transform  = 'scale(1)';
+    }, 1800);
+  }
 
-/**
- * WhatsApp Float Button Tracking
- */
-const whatsappFloat = document.querySelector('.whatsapp-float');
-if (whatsappFloat) {
-    whatsappFloat.addEventListener('click', function () {
-        // TRACKING: whatsapp_float_click
-        console.log('TRACKING: whatsapp_float_click');
-    });
-}
+  /* ──────────────────────────────────────────────
+     12. PAGE LOAD — stagger sections after hero
+  ────────────────────────────────────────────── */
+  window.addEventListener('load', () => {
+    document.body.classList.add('loaded');
+  });
 
-/**
- * Scroll Depth Tracking
- */
-let scrollMilestones = [25, 50, 75, 100];
-let milestonesReached = [];
-
-window.addEventListener('scroll', function () {
-    const scrollPercent = Math.round(
-        (window.scrollY / (document.documentElement.scrollHeight - window.innerHeight)) * 100
-    );
-
-    scrollMilestones.forEach(function (milestone) {
-        if (scrollPercent >= milestone && !milestonesReached.includes(milestone)) {
-            milestonesReached.push(milestone);
-            // TRACKING: scroll_depth
-            console.log('TRACKING: scroll_depth_' + milestone);
-        }
-    });
-});
-
-/**
- * Time on Page Tracking
- */
-let timeOnPage = 0;
-let timeIntervals = [30, 60, 120, 300]; // seconds
-let timeEventsTracked = [];
-
-setInterval(function () {
-    timeOnPage++;
-
-    timeIntervals.forEach(function (interval) {
-        if (timeOnPage === interval && !timeEventsTracked.includes(interval)) {
-            timeEventsTracked.push(interval);
-            // TRACKING: time_on_page
-            console.log('TRACKING: time_on_page_' + interval + 's');
-        }
-    });
-}, 1000);
-
-// Log page load
-console.log('TRACKING: page_load - Sinodol Homepage');
+})();
